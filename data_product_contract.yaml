@@ -1,0 +1,88 @@
+# Data Product Contract - Driver Performance
+version: "1.0.0"
+
+product_info:
+  name: "Driver Performance"
+  owner: "Szymon Łupiński"
+  domain: "Sports Analytics"
+  purpose: >
+    Provides a standardized, Gold-layer view of F1 driver performance, 
+    focusing on lap times, speed traps, and tire strategies for BI and ML.
+  status: "production-like"
+
+data_sources:
+  - name: "FastF1 API"
+    type: "API / Parquet"
+    description: "Official FIA Timing Feeds via FastF1 library"
+
+refresh_info:
+  frequency: "Weekly"
+  update_trigger: "End of each Grand Prix weekend (Qualifying & Race)"
+  cadence_description: "Processed batch-wise after data availability on official sources"
+
+access_method:
+  type: "PostgreSQL / GitHub CSV"
+  connection_details:
+    host: "pjatk-big-data-db.example.com" 
+    port: 5432
+    database: "f1_analytics"
+    table: "gold_driver_performance"
+  direct_link: ""
+
+schema:
+  - column: "year"
+    type: "integer"
+    description: "The racing season year (e.g., 2025)"
+  - column: "grand_prix"
+    type: "string"
+    description: "Name of the Grand Prix event"
+  - column: "session_type"
+    type: "string"
+    description: "Type of session: Q (Qualifying) or R (Race)"
+  - column: "driver"
+    type: "string"
+    description: "3-letter driver code (e.g., VER, HAM)"
+  - column: "team"
+    type: "string"
+    description: "Constructor name"
+  - column: "avg_lap_time_s"
+    type: "float"
+    description: "Average lap time in seconds"
+  - column: "soft_laps"
+    type: "integer"
+    description: "Number of laps completed on Soft compound"
+  - column: "rank_in_race"
+    type: "integer"
+    description: "Final position in the session"
+
+quality_metrics:
+  - metric_name: "Completeness of avg_lap_time_s"
+    definition: "Percentage of rows where avg_lap_time_s is not null"
+    current_value: "100%"
+    expected_threshold: "> 99%"
+    update_cadence: "Every pipeline run"
+  
+  - metric_name: "Validity of session_type"
+    definition: "Percentage of records matching allowed categories: 'Q' or 'R'"
+    current_value: "100%"
+    expected_threshold: "100%"
+    update_cadence: "Every pipeline run"
+
+  - metric_name: "Consistency of lap times"
+    definition: "Laps should be within a logical range (60s < time < 200s)"
+    current_value: "99.5%"
+    expected_threshold: "> 98%"
+    update_cadence: "Weekly"
+
+known_limitations:
+  - "No weather context (Rain/Dry track conditions not included)"
+  - "Low granularity (Averages per session, not per lap telemetry)"
+  - "Historical scaling issues in raw data (potential s vs ns discrepancies)"
+
+example_usage:
+  sql: >
+    SELECT driver, avg_lap_time_s 
+    FROM gold_driver_performance 
+    WHERE grand_prix = 'Abu Dhabi Grand Prix' AND session_type = 'R' 
+    ORDER BY rank_in_race ASC LIMIT 5;
+  

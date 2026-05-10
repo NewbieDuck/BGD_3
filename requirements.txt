@@ -1,0 +1,6 @@
+fastf1
+pandas
+pyarrow
+pyspark
+sqlalchemy
+psycopg2-binary
